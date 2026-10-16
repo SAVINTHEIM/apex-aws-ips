@@ -1,0 +1,26 @@
+name: Update Apex AWS IPs
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Запуск каждый день в 4:00 утра
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch and filter AWS IP ranges
+        run: |
+          curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | \
+          jq -r '.prefixes[] | select(.region=="eu-central-1") | .ip_prefix' | \
+          sort -u > apex-eu.txt
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add apex-eu.txt
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update AWS IP ranges for eu-central-1" && git push)
