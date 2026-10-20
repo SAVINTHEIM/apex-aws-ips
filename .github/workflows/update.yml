@@ -1,4 +1,4 @@
-name: Update Apex AWS IPs
+name: Update Apex EU IP List
 
 on:
   schedule:
@@ -11,19 +11,51 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch and filter AWS IP ranges
+      - name: Download AWS IP ranges
+        shell: bash
         run: |
-          curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | \
-          jq -r '.prefixes[] | select(.region=="eu-central-1") | .ip_prefix' | \
-          sort -u > apex-eu.txt
+          set -euo pipefail
 
-      - name: Commit and push if changed
-        run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          git add apex-eu.txt
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update AWS IP ranges for eu-central-1" && git push)
+          curl --fail --silent --show-error --location \
+            --retry 3 \
+            https://ip-ranges.amazonaws.com/ip-ranges.json \
+            -o aws-ip-ranges.json
+
+          jq -e '.prefixes | type == "array"' aws-ip-ranges.json >/dev/null
+
+          jq -r '
+            .prefixes[]
+            | select(
+                .service == "EC2" and
+                (
+                  .region == "eu-central-1" or
+                  .region == "eu-west-1" or
+                  .region == "eu-west-2" or
+                  .region == "eu-west-3" or
+                  .region == "eu-north-1" or
+                  .region == "eu-south-1" or
+                  .region == "eu-south-2" or
+                  .region == "eu-central-2"
+                )
+              )
+            | .ip_prefix
+          ' aws-ip-ranges.json | sort -u > apex-eu.txt
+
+          if [ ! -s apex-eu.txt ]; then
+            echo "::error::IP list is empty; refusing to continue."
+            exit 1
+          fi
+
+          echo "Updated candidate IP ranges:"
+          wc -l apex-eu.txt
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update Apex EU IP candidates"
+          file_pattern: apex-eu.txt
