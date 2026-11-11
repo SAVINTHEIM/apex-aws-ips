@@ -1,4 +1,3 @@
-
 name: Update Apex AWS IP Lists
 
 on:
@@ -71,3 +70,5 @@ jobs:
         with:
           commit_message: "Update European AWS IP lists"
           file_pattern: apex-eu.txt apex-eu1.txt
+          commit_user_name: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com>"
