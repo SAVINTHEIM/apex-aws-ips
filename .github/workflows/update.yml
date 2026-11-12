@@ -1,3 +1,4 @@
+
 name: Update Apex AWS IP Lists
 
 on:
@@ -33,6 +34,9 @@ jobs:
             (.prefixes | length > 0)
           ' aws-ip-ranges.json >/dev/null
 
+          echo "AWS syncToken: $(jq -r '.syncToken' aws-ip-ranges.json)"
+          echo "AWS createDate: $(jq -r '.createDate' aws-ip-ranges.json)"
+
       - name: Update apex-eu.txt
         shell: bash
         run: |
@@ -48,6 +52,8 @@ jobs:
           ' aws-ip-ranges.json | LC_ALL=C sort -u > apex-eu.txt
 
           test -s apex-eu.txt
+
+          echo "Frankfurt IP ranges: $(wc -l < apex-eu.txt)"
 
       - name: Update apex-eu1.txt
         shell: bash
@@ -65,10 +71,10 @@ jobs:
 
           test -s apex-eu1.txt
 
+          echo "European IP ranges: $(wc -l < apex-eu1.txt)"
+
       - name: Commit and push if changed
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update European AWS IP lists"
           file_pattern: apex-eu.txt apex-eu1.txt
-          commit_user_name: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
-          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com>"
